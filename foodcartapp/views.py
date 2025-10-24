@@ -1,13 +1,16 @@
+import json
 from django.http import JsonResponse
 from django.templatetags.static import static
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+
+from .models import Product, Orders, OrderDetails
 
 
-from .models import Product
-
-
+@api_view(['GET'])
 def banners_list_api(request):
     # FIXME move data to db?
-    return JsonResponse([
+    return Response([
         {
             'title': 'Burger',
             'src': static('burger.jpg'),
@@ -23,15 +26,12 @@ def banners_list_api(request):
             'src': static('tasty.jpg'),
             'text': 'Food is incomplete without a tasty dessert',
         }
-    ], safe=False, json_dumps_params={
-        'ensure_ascii': False,
-        'indent': 4,
-    })
+    ])
 
 
+@api_view(['GET'])
 def product_list_api(request):
     products = Product.objects.select_related('category').available()
-
     dumped_products = []
     for product in products:
         dumped_product = {
@@ -51,12 +51,23 @@ def product_list_api(request):
             }
         }
         dumped_products.append(dumped_product)
-    return JsonResponse(dumped_products, safe=False, json_dumps_params={
-        'ensure_ascii': False,
-        'indent': 4,
-    })
+    return Response(dumped_products)
 
 
+@api_view(['GET'])
 def register_order(request):
-    # TODO это лишь заглушка
-    return JsonResponse({})
+    print(request.data)
+    order_json = json.loads(request.data)
+    order = Orders.objects.create(
+        first_name=order_json["firstname"],
+        last_name=order_json["lastname"],
+        phone_number=order_json["phonenumber"],
+        address=order_json["address"],
+    )
+    for ordered_product in order_json["products"]:
+        OrderDetails.objects.create(
+            product=Product.objects.get(id=ordered_product["product"]),
+            quantity=ordered_product["quantity"],
+            order=order
+        )
+    return Response(order_json)
