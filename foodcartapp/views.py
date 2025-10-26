@@ -1,10 +1,13 @@
 import json
+from types import NoneType
+
+from django.core.exceptions import ObjectDoesNotExist
 from django.http import JsonResponse
 from django.templatetags.static import static
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-
+import phonenumbers
 from .models import Product, Orders, OrderDetails
 
 
@@ -58,16 +61,40 @@ def product_list_api(request):
 @api_view(['POST'])
 def register_order(request):
     order_json = request.data
-    try:
-        if not order_json["products"]:
-            return Response({
-                "error": f"products: Это поле не может быть пустым"
-            },
-                status=status.HTTP_400_BAD_REQUEST
-            )
-    except (KeyError, IndexError):
+    error_fields = []
+    bd_fields = ["products", "firstname", "lastname", "phonenumber", "address"]
+    print(type(None))
+    for field_number in range(1, len(order_json)):
+        if not isinstance(order_json[bd_fields[field_number]], str):
+            if not isinstance(order_json[bd_fields[field_number]], type(None)):
+                return Response({
+                    "error": f"{bd_fields[field_number]}: Ожидался str, но был получен {type(order_json[bd_fields[field_number]])}. '{bd_fields[field_number]}': '{order_json['products']}'"
+                },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+    for field in bd_fields:
+        try:
+            if not order_json[f"{field}"]:
+                error_fields.append(field)
+        except KeyError:
+            error_fields.append(field)
+    if error_fields:
         return Response({
-            "error": f"products: Это поле не может быть пустым"
+            "error": f"{', '.join(error_fields)}: Это поле не может быть пустым"
+        },
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    if not phonenumbers.is_valid_number(phonenumbers.parse(order_json["phonenumber"])):
+        return Response({
+            "error": "phonenumber: Некорректный номер телефона"
+        },
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    try:
+        [Product.objects.get(id=product["product"]) for product in order_json["products"]]
+    except ObjectDoesNotExist:
+        return Response({
+            "error": "products: Некорректный id продукта"
         },
             status=status.HTTP_400_BAD_REQUEST
         )
@@ -87,7 +114,7 @@ def register_order(request):
         return Response(order_json)
     else:
         return Response({
-            "error": f"products: Ожидался list со значениями, но был получен 'str'. 'products': '{order_json['products']}'"
+            "error": f"products: Ожидался list со значениями, но был получен {type(order_json['products'])}. 'products': '{order_json['products']}'"
         },
             status=status.HTTP_400_BAD_REQUEST
         )
