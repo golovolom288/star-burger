@@ -54,20 +54,23 @@ def product_list_api(request):
     return Response(dumped_products)
 
 
-@api_view(['GET'])
+@api_view(['POST'])
 def register_order(request):
-    print(request.data)
-    order_json = json.loads(request.data)
-    order = Orders.objects.create(
-        first_name=order_json["firstname"],
-        last_name=order_json["lastname"],
-        phone_number=order_json["phonenumber"],
-        address=order_json["address"],
-    )
-    for ordered_product in order_json["products"]:
-        OrderDetails.objects.create(
-            product=Product.objects.get(id=ordered_product["product"]),
-            quantity=ordered_product["quantity"],
-            order=order
+    order_json = request.data
+    print(order_json)
+    try:
+        order = Orders.objects.create(
+            first_name=order_json["firstname"],
+            last_name=order_json["lastname"],
+            phone_number=order_json["phonenumber"],
+            address=order_json["address"],
         )
-    return Response(order_json)
+        for ordered_product in order_json["products"]:
+            OrderDetails.objects.create(
+                product=Product.objects.get(id=ordered_product["product"]),
+                quantity=ordered_product["quantity"],
+                order=order
+            )
+        return Response(order_json)
+    except KeyError:
+        return Response(order_json)
