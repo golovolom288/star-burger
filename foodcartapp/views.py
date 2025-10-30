@@ -1,13 +1,9 @@
-import json
-from types import NoneType
-
-from django.core.exceptions import ObjectDoesNotExist
-from django.http import JsonResponse
 from django.templatetags.static import static
-from rest_framework import status
+from django.views.decorators.csrf import csrf_exempt
+from rest_framework import serializers
 from rest_framework.decorators import api_view
+from rest_framework.serializers import ModelSerializer, ListField, Serializer
 from rest_framework.response import Response
-import phonenumbers
 from .models import Product, Orders, OrderDetails
 
 
@@ -58,63 +54,39 @@ def product_list_api(request):
     return Response(dumped_products)
 
 
-@api_view(['POST'])
+class OrderSerializer(ModelSerializer):
+    class OrderDetailsSerializer(ModelSerializer):
+        product = serializers.PrimaryKeyRelatedField(queryset=Product.objects.all())
+
+        class Meta:
+            model = OrderDetails
+            fields = ["product", "quantity"]
+
+    products = OrderDetailsSerializer(many=True, source="order_details")
+
+    class Meta:
+        model = Orders
+        fields = ["id", "first_name", "last_name", "phone_number", "address", "products"]
+
+    def create(self, validated_data):
+        products_data = validated_data.pop('order_details')
+        order = Orders.objects.create(**validated_data)
+        for detail_data in products_data:
+            OrderDetails.objects.create(order=order, **detail_data)
+        return order
+
+
+@api_view(['GET', 'POST'])
 def register_order(request):
-    order_json = request.data
-    error_fields = []
-    bd_fields = ["products", "firstname", "lastname", "phonenumber", "address"]
-    print(type(None))
-    for field_number in range(1, len(order_json)):
-        if not isinstance(order_json[bd_fields[field_number]], str):
-            if not isinstance(order_json[bd_fields[field_number]], type(None)):
-                return Response({
-                    "error": f"{bd_fields[field_number]}: Ожидался str, но был получен {type(order_json[bd_fields[field_number]])}. '{bd_fields[field_number]}': '{order_json['products']}'"
-                },
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-    for field in bd_fields:
-        try:
-            if not order_json[f"{field}"]:
-                error_fields.append(field)
-        except KeyError:
-            error_fields.append(field)
-    if error_fields:
-        return Response({
-            "error": f"{', '.join(error_fields)}: Это поле не может быть пустым"
-        },
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    if not phonenumbers.is_valid_number(phonenumbers.parse(order_json["phonenumber"])):
-        return Response({
-            "error": "phonenumber: Некорректный номер телефона"
-        },
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    try:
-        [Product.objects.get(id=product["product"]) for product in order_json["products"]]
-    except ObjectDoesNotExist:
-        return Response({
-            "error": "products: Некорректный id продукта"
-        },
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    if isinstance(order_json["products"], list):
-        order = Orders.objects.create(
-            first_name=order_json["firstname"],
-            last_name=order_json["lastname"],
-            phone_number=order_json["phonenumber"],
-            address=order_json["address"],
-        )
-        for ordered_product in order_json["products"]:
-            OrderDetails.objects.create(
-                product=Product.objects.get(id=ordered_product["product"]),
-                quantity=ordered_product["quantity"],
-                order=order
-            )
-        return Response(order_json)
-    else:
-        return Response({
-            "error": f"products: Ожидался list со значениями, но был получен {type(order_json['products'])}. 'products': '{order_json['products']}'"
-        },
-            status=status.HTTP_400_BAD_REQUEST
-        )
+    if request.method == "POST":
+        order_json = request.data
+        serializer = OrderSerializer(data=order_json)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        for product in serializer.validated_data["order_details"]:
+            product["product"] = product["product"].id
+        return Response(serializer.validated_data, 201)
+    elif request.method == "GET":
+        order = Orders.objects.order_by('-id').first()
+        serializer = OrderSerializer(order)
+        return Response(serializer.data)

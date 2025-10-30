@@ -47,16 +47,16 @@ class App extends Component {
     this.setState({checkoutModalActive: false});
   }
 
-  async handleCheckout({firstname, lastname, phonenumber, address}){
+  async handleCheckout({first_name, last_name, phone_number, address}){
     const url = "api/order/";
     let data = {
       'products': this.state.cart.map(item=>({
         product: item.id,
         quantity: item.quantity,
       })),
-      firstname,
-      lastname,
-      phonenumber,
+      first_name,
+      last_name,
+      phone_number,
       address
     };
 
