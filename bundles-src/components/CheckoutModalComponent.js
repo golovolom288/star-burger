@@ -4,9 +4,9 @@ import {Button} from 'react-bootstrap';
 
 class CheckoutModal extends Component{
   state = {
-    firstname: "",
-    lastname: "",
-    phonenumber: "",
+    first_name: "",
+    last_name: "",
+    phone_number: "",
     address: "",
     waitTillCheckoutEnds: false,
   }
@@ -14,21 +14,21 @@ class CheckoutModal extends Component{
   saveFirstname = event => {
     const {target : {value}}  = event;
     this.setState({
-      firstname : value
+      first_name : value
     });
   }
 
   saveLastname = event => {
     const {target : {value}}  = event;
     this.setState({
-      lastname : value
+      last_name : value
     });
   }
 
   savePhonenumber = (event) => {
     const {target : {value}} = event;
     this.setState({
-      phonenumber : value
+      phone_number : value
     });
   }
 
@@ -69,12 +69,12 @@ class CheckoutModal extends Component{
           </Modal.Header>
           <Modal.Body>
             <div className="form-group container-fluid">
-              <label htmlFor="firstname">Имя:</label>
-              <input onChange={this.saveFirstname} required id="firstname" type="text" className="form-control"/><br/>
-              <label htmlFor="lastname">Фамилия:</label>
-              <input onChange={this.saveLastname} required id="lastname" type="text" className="form-control"/><br/>
-              <label htmlFor="phonenumber">Телефон:</label>
-              <input onChange={this.savePhonenumber} required id="phonenumber" maxLength="20" type="tel" className="form-control" placeholder="+7 901 ..."/><br/>
+              <label htmlFor="first_name">Имя:</label>
+              <input onChange={this.saveFirstname} required id="first_name" type="text" className="form-control"/><br/>
+              <label htmlFor="last_name">Фамилия:</label>
+              <input onChange={this.saveLastname} required id="last_name" type="text" className="form-control"/><br/>
+              <label htmlFor="phone_number">Телефон:</label>
+              <input onChange={this.savePhonenumber} required id="phone_number" maxLength="20" type="tel" className="form-control" placeholder="+7 901 ..."/><br/>
               <label htmlFor="address">Адрес доставки:</label>
               <input onChange={this.saveAddress} required id="address" type="text" maxLength="256" className="form-control" placeholder="Город, улица, дом"/><br/>
             </div>
