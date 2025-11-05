@@ -166,6 +166,13 @@ class OrderDetails(models.Model):
         on_delete=models.CASCADE
     )
 
+    price = models.DecimalField(
+        'цена',
+        max_digits=8,
+        decimal_places=2,
+        validators=[MinValueValidator(0)],
+    )
+
     class Meta:
         verbose_name = 'детали заказа'
         verbose_name_plural = 'детали заказа'
