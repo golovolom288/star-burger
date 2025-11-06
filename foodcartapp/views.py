@@ -1,3 +1,4 @@
+from django.db.transaction import atomic
 from django.templatetags.static import static
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import serializers
@@ -72,17 +73,18 @@ class OrderSerializer(ModelSerializer):
         products_data = validated_data.pop('order_details')
         order = Orders.objects.create(**validated_data)
         for detail_data in products_data:
-            OrderDetails.objects.create(order=order, **detail_data)
+            OrderDetails.objects.create(order=order, price=products_data[0]["product"].price * detail_data["quantity"], **detail_data)
         return order
 
 
 @api_view(['GET', 'POST'])
 def register_order(request):
     if request.method == "POST":
-        order_json = request.data
-        serializer = OrderSerializer(data=order_json)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
+        with atomic():
+            order_json = request.data
+            serializer = OrderSerializer(data=order_json)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
         for product in serializer.validated_data["order_details"]:
             product["product"] = product["product"].id
         return Response(serializer.validated_data, 201)
