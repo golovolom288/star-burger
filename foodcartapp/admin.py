@@ -18,14 +18,6 @@ class OrderDetailsInline(admin.TabularInline):
     model = OrderDetails
     extra = 0
 
-    def save_formset(self, request, form, formset, change):
-        print("yes")
-        instances = formset.save(commit=False)
-        for instance in instances:
-            instance.price = instance.product.price * instance.quantity
-            instance.save()
-        formset.save_m2m()
-
 
 @admin.register(Restaurant)
 class RestaurantAdmin(admin.ModelAdmin):
@@ -125,6 +117,13 @@ class OrdersAdmin(admin.ModelAdmin):
     inlines = [
         OrderDetailsInline
     ]
+
+    def save_formset(self, request, form, formset, change):
+        instances = formset.save(commit=False)
+        for instance in instances:
+            instance.price = instance.product.price * instance.quantity
+            instance.save()
+        formset.save_m2m()
 
 
 @admin.register(OrderDetails)
