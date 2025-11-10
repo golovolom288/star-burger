@@ -1,7 +1,9 @@
 from django.contrib import admin
-from django.shortcuts import reverse
+from django.http import HttpResponseRedirect
+from django.shortcuts import reverse, redirect
 from django.templatetags.static import static
 from django.utils.html import format_html
+from django.utils.http import url_has_allowed_host_and_scheme
 
 from .models import Product, Orders, OrderDetails
 from .models import ProductCategory
@@ -124,6 +126,13 @@ class OrdersAdmin(admin.ModelAdmin):
             instance.price = instance.product.price * instance.quantity
             instance.save()
         formset.save_m2m()
+
+    def response_change(self, request, obj):
+        next = request.GET.get("next")
+        if next and url_has_allowed_host_and_scheme(next, allowed_hosts={request.get_host()}, require_https=False):
+            return redirect(reverse("restaurateur:view_orders"))
+        else:
+            return super().response_change(request, obj)
 
 
 @admin.register(OrderDetails)
