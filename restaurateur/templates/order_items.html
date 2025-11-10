@@ -21,8 +21,10 @@
     </tr>
 
     {% for item in order_items %}
+      {% if item.status != "Отдан заказчику"%}
       <tr>
         <td>{{ item.id }}</td>
+        <td>{{ item.status }}</td>
         <td>{{ item.price}} руб.</td>
         <td>{{ item.first_name }} {{ item.last_name }}</td>
         <td>{{ item.phone_number }}</td>
@@ -30,6 +32,7 @@
         {% url 'admin:foodcartapp_orders_change' item.id as change_page%}
         <td><a href="{{change_page}}?next={{request.path|urlencode}}">Редактировать заказ</a></td>
       </tr>
+      {%endif%}
     {% endfor %}
    </table>
   </div>

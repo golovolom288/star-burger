@@ -3,6 +3,15 @@ from django.core.validators import MinValueValidator
 from phonenumber_field.modelfields import PhoneNumberField
 
 
+STATUS_CHOICES = [
+    ("Принят", "Принят"),
+    ("Передан ресторану", "Передан ресторану"),
+    ("Готовится", "Готовится"),
+    ("Передан курьеру", "Передан курьеру"),
+    ("Отдан заказчику", "Отдан заказчику"),
+]
+
+
 class Restaurant(models.Model):
     name = models.CharField(
         'название',
@@ -140,6 +149,7 @@ class Orders(models.Model):
         verbose_name="Адрес доставки",
         max_length=50
     )
+    status = models.CharField(choices=STATUS_CHOICES, default="Принят")
 
     class Meta:
         verbose_name = 'заказы'
@@ -147,6 +157,9 @@ class Orders(models.Model):
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}, {self.address}"
+
+
+
 
 
 class OrderDetails(models.Model):
