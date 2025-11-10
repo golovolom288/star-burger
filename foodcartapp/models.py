@@ -150,6 +150,7 @@ class Orders(models.Model):
         max_length=50
     )
     status = models.CharField(choices=STATUS_CHOICES, default="Принят")
+    comment = models.TextField(null=True, blank=True, default="")
 
     class Meta:
         verbose_name = 'заказы'
