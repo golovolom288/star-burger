@@ -1,5 +1,7 @@
 from django import forms
-from django.db.models import F, FloatField, Sum
+import requests
+from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import F, Sum
 from django.shortcuts import redirect, render
 from django.views import View
 from django.urls import reverse_lazy
@@ -7,9 +9,13 @@ from django.contrib.auth.decorators import user_passes_test
 
 from django.contrib.auth import authenticate, login
 from django.contrib.auth import views as auth_views
+import django.conf.global_settings
+from geopy import distance
+from foodcartapp.models import Product, Restaurant, Orders, RestaurantMenuItem
+from geopy_bd.models import GeoPy
+from star_burger.settings import YANDEX_API_KEY
 
-
-from foodcartapp.models import Product, Restaurant, Orders, OrderDetails
+coordinates = {}
 
 
 class Login(forms.Form):
@@ -91,8 +97,78 @@ def view_restaurants(request):
     })
 
 
+def fetch_coordinates(apikey, address):
+    base_url = "https://geocode-maps.yandex.ru/1.x"
+    response = requests.get(base_url, params={
+        "geocode": address,
+        "apikey": apikey,
+        "format": "json",
+    })
+    response.raise_for_status()
+    found_places = response.json()['response']['GeoObjectCollection']['featureMember']
+
+    if not found_places:
+        return None
+
+    most_relevant = found_places[0]
+    lon, lat = most_relevant['GeoObject']['Point']['pos'].split(" ")
+    return lon, lat
+
+
+def get_coordinates(model):
+    global coordinates
+    try:
+        model_coordinates = coordinates[model.address]
+    except KeyError:
+        model_coordinates = GeoPy.objects.get_or_create(
+            address=model.address,
+            defaults={
+                "lat": fetch_coordinates(YANDEX_API_KEY, model.address)[0],
+                "lon": fetch_coordinates(YANDEX_API_KEY, model.address)[1]
+            }
+        )
+        coordinates[model.address] = {}
+        coordinates[model.address]["lat"] = model_coordinates[0].lat
+        coordinates[model.address]["lon"] = model_coordinates[0].lon
+    return model_coordinates
+
+
 @user_passes_test(is_manager, login_url='restaurateur:login')
 def view_orders(request):
+    restaurants = {}
+    restaurantmenuitem_model = RestaurantMenuItem.objects.all()
+    restaurants_model = Restaurant.objects.only("id", "address", "name").prefetch_related("menu_items")
+    for order in Orders.objects.only("id", "address", "order_details").prefetch_related("order_details"):
+        order_coordinates = get_coordinates(order)
+        restaurants[order.id] = {}
+        for restaurant in restaurants_model:
+            try:
+                for product in order.order_details.only("product").prefetch_related("product"):
+                    restaurantmenuitem_model.get(product=product.product, restaurant=restaurant, availability=True)
+            except ObjectDoesNotExist:
+                continue
+            restaurant_coordinates = get_coordinates(restaurant)
+            if restaurant_coordinates and order_coordinates:
+                restaurants[order.id][restaurant.id] = {
+                    "name": restaurant.name,
+                    "distance": round(
+                        distance.distance((
+                                coordinates[order.address]["lat"],
+                                coordinates[order.address]["lon"]
+                            ),
+                            (
+                                coordinates[restaurant.address]["lat"],
+                                coordinates[restaurant.address]["lon"]
+                            )).km, 2
+                    )
+                }
+            else:
+                restaurants[order.id][restaurant.id] = {
+                    "name": restaurant.name,
+                    "distance": "Ошибка определения координат"
+                }
+        restaurants[order.id] = sorted(restaurants[order.id].values(), key=lambda item: item["distance"])
     return render(request, template_name='order_items.html', context={
-        'order_items': Orders.objects.prefetch_related("order_details").annotate(price=Sum(F("order_details__price"))).iterator(chunk_size=2000),
+        'order_items': Orders.objects.prefetch_related("order_details").annotate(price=Sum(F("order_details__price"))).iterator(chunk_size=500),
+        'orders_availability': restaurants
     })

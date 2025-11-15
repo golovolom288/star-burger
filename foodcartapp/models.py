@@ -12,11 +12,17 @@ STATUS_CHOICES = [
     ("Отдан заказчику", "Отдан заказчику"),
 ]
 
+PAY_METHOD_CHOICES = [
+    ("Наличностью", "Наличностью"),
+    ("Электронно", "Электронно")
+]
+
 
 class Restaurant(models.Model):
     name = models.CharField(
         'название',
-        max_length=50
+        max_length=50,
+        db_index=True
     )
     address = models.CharField(
         'адрес',
@@ -150,11 +156,38 @@ class Orders(models.Model):
         verbose_name="Адрес доставки",
         max_length=50
     )
-    status = models.CharField(choices=STATUS_CHOICES, default="Принят")
-    comment = models.TextField(null=True, blank=True, default="")
-    registration_time = models.DateTimeField(default=timezone.now)
-    call_time = models.DateTimeField(null=True, blank=True)
-    delivery_time = models.DateTimeField(null=True, blank=True)
+    status = models.CharField(
+        choices=STATUS_CHOICES,
+        default="Принят"
+    )
+    comment = models.TextField(
+        null=True,
+        blank=True,
+        default=""
+    )
+    registration_time = models.DateTimeField(
+        default=timezone.now
+    )
+    call_time = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+    delivery_time = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+    pay_method = models.CharField(
+        choices=PAY_METHOD_CHOICES,
+        default="Наличностью"
+    )
+    restaurant = models.ForeignKey(
+        Restaurant,
+        on_delete=models.CASCADE,
+        related_name='orders',
+        verbose_name='ресторан',
+        null=True,
+        blank=True
+    )
 
     class Meta:
         verbose_name = 'заказы'
@@ -162,9 +195,6 @@ class Orders(models.Model):
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}, {self.address}"
-
-
-
 
 
 class OrderDetails(models.Model):

@@ -15,11 +15,13 @@
     <tr>
       <th>ID заказа</th>
       <th>Статус заказа</th>
+      <th>Способ оплаты</th>
       <th>Стоимость заказа</th>
       <th>Клиент</th>
       <th>Телефон</th>
       <th>Адрес доставки</th>
       <th>Комментарий</th>
+      <th>Рестораны</th>
       <th>Ссылка на админку</th>
     </tr>
 
@@ -28,11 +30,30 @@
       <tr>
         <td>{{ item.id }}</td>
         <td>{{ item.status }}</td>
+        <td>{{ item.pay_method }}
         <td>{{ item.price}} руб.</td>
         <td>{{ item.first_name }} {{ item.last_name }}</td>
         <td>{{ item.phone_number }}</td>
         <td>{{ item.address }}</td>
         <td>{{ item.comment }}</td>
+        {% if item.status == "Готовится" %}
+          <td>Готовит: {{ item.restaurant}}</td>
+        {% elif item.status == "Принят"%}
+          <td>
+            <details>
+            <summary>Рестораны, которые могут приготовить заказ:</summary>
+              <ul>
+                {% for key, order in orders_availability.items%}
+                  {%if key == item.id%}
+                    {%for restaurant in order%}
+                      <li>{{ restaurant.name }} - {{ restaurant.distance }} км.</li>
+                    {%endfor%}
+                  {%endif%}
+                {% endfor %}
+              </ul>
+            </details>
+          </td>
+        {%endif%}
         {% url 'admin:foodcartapp_orders_change' item.id as change_page%}
         <td><a href="{{change_page}}?next={{request.path|urlencode}}">Редактировать заказ</a></td>
       </tr>
