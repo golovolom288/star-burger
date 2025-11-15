@@ -1,9 +1,8 @@
 from django.db.transaction import atomic
 from django.templatetags.static import static
-from django.views.decorators.csrf import csrf_exempt
 from rest_framework import serializers
 from rest_framework.decorators import api_view
-from rest_framework.serializers import ModelSerializer, ListField, Serializer
+from rest_framework.serializers import ModelSerializer
 from rest_framework.response import Response
 from .models import Product, Orders, OrderDetails
 

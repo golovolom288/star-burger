@@ -4,5 +4,4 @@ Pillow==11.2.*
 environs[django]==14.2.*
 djangorestframework~=3.16.1
 requests~=2.32.5
-
 geopy~=2.4.1
