@@ -54,15 +54,17 @@ def product_list_api(request):
     return Response(dumped_products)
 
 
+class OrderDetailsSerializer(ModelSerializer):
+    product = serializers.PrimaryKeyRelatedField(queryset=Product.objects.all())
+
+    class Meta:
+        model = OrderDetails
+        fields = ["product", "quantity"]
+
+
 class OrderSerializer(ModelSerializer):
-    class OrderDetailsSerializer(ModelSerializer):
-        product = serializers.PrimaryKeyRelatedField(queryset=Product.objects.all())
 
-        class Meta:
-            model = OrderDetails
-            fields = ["product", "quantity"]
-
-    products = OrderDetailsSerializer(many=True, source="order_details")
+    products = OrderDetailsSerializer(many=True, source="order_details", allow_empty=False)
 
     class Meta:
         model = Orders
@@ -76,7 +78,7 @@ class OrderSerializer(ModelSerializer):
         return order
 
 
-@api_view(['GET', 'POST'])
+@api_view(['POST'])
 def register_order(request):
     if request.method == "POST":
         with atomic():
@@ -84,8 +86,8 @@ def register_order(request):
             serializer = OrderSerializer(data=order_json)
             serializer.is_valid(raise_exception=True)
             serializer.save()
-        for product in serializer.validated_data["order_details"]:
-            product["product"] = product["product"].id
+        for order_detail in serializer.validated_data["order_details"]:
+            order_detail["product"] = order_detail["product"].id
         return Response(serializer.validated_data, 201)
     elif request.method == "GET":
         order = Orders.objects.order_by('-id').first()

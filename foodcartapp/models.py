@@ -5,6 +5,7 @@ from phonenumber_field.modelfields import PhoneNumberField
 
 
 STATUS_CHOICES = [
+    ("Не обработан","Не обработан"),
     ("Принят", "Принят"),
     ("Передан ресторану", "Передан ресторану"),
     ("Готовится", "Готовится"),
@@ -150,7 +151,8 @@ class Orders(models.Model):
         max_length=50
     )
     phone_number = PhoneNumberField(
-        verbose_name="Номер телефона"
+        verbose_name="Номер телефона",
+        db_index=True,
     )
     address = models.CharField(
         verbose_name="Адрес доставки",
@@ -158,33 +160,42 @@ class Orders(models.Model):
     )
     status = models.CharField(
         choices=STATUS_CHOICES,
-        default="Принят"
+        default="Не обработан",
+        verbose_name="Статус заказа",
+        db_index = True,
     )
     comment = models.TextField(
-        null=True,
         blank=True,
-        default=""
+        default="",
+        verbose_name="Комментарий к заказу"
     )
     registration_time = models.DateTimeField(
-        default=timezone.now
+        default=timezone.now,
+        verbose_name="Дата регистрации заказа",
+        db_index=True,
     )
     call_time = models.DateTimeField(
         null=True,
-        blank=True
+        blank=True,
+        verbose_name="Дата звонка клиенту",
+        db_index=True,
     )
     delivery_time = models.DateTimeField(
         null=True,
-        blank=True
+        blank=True,
+        verbose_name="Дата доставки клиенту",
+        db_index=True,
     )
     pay_method = models.CharField(
         choices=PAY_METHOD_CHOICES,
-        default="Наличностью"
+        verbose_name="Метод оплаты",
+        db_index=True,
     )
     restaurant = models.ForeignKey(
         Restaurant,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name='orders',
-        verbose_name='ресторан',
+        verbose_name='Ресторан выполняюзий заказ',
         null=True,
         blank=True
     )
@@ -200,16 +211,19 @@ class Orders(models.Model):
 class OrderDetails(models.Model):
     product = models.ForeignKey(
         Product,
-        verbose_name='Детали заказа',
+        verbose_name='Заказанный продукт',
         related_name='order_details',
         on_delete=models.CASCADE
     )
 
-    quantity = models.IntegerField()
+    quantity = models.IntegerField(
+        verbose_name="Количество продукта",
+        validators=[MinValueValidator(0)],
+    )
 
     order = models.ForeignKey(
         Orders,
-        verbose_name='Детали заказа',
+        verbose_name='Заказ',
         related_name='order_details',
         on_delete=models.CASCADE
     )
@@ -219,7 +233,6 @@ class OrderDetails(models.Model):
         max_digits=8,
         decimal_places=2,
         validators=[MinValueValidator(0)],
-        blank=True,
     )
 
     class Meta:

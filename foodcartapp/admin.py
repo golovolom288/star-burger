@@ -135,4 +135,5 @@ class OrdersAdmin(admin.ModelAdmin):
 
 @admin.register(OrderDetails)
 class OrderDetailsAdmin(admin.ModelAdmin):
+    raw_id_fields = ["order"]
     pass
