@@ -99,7 +99,7 @@ def view_orders(request):
     coordinates = {}
     restaurantmenuitem_model = RestaurantMenuItem.objects.all()
     restaurants_model = Restaurant.objects.only("id", "address", "name").prefetch_related("menu_items")
-    for order in Orders.objects.only("id", "address", "order_details","product", "restaurant").prefetch_related("order_details"):
+    for order in Orders.objects.only("id", "address", "order_details__product", "restaurant").prefetch_related("order_details"):
         order_coordinates, coordinates = get_coordinates(order, coordinates)
         restaurants[order.id] = {}
         for restaurant in restaurants_model:

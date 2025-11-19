@@ -74,7 +74,7 @@ class OrderSerializer(ModelSerializer):
         products_data = validated_data.pop('order_details')
         order = Orders.objects.create(**validated_data)
         for detail_data in products_data:
-            OrderDetails.objects.create(order=order, price=products_data[0]["product"].price * detail_data["quantity"], **detail_data)
+            OrderDetails.objects.create(order=order, price=detail_data["product"].price * detail_data["quantity"], **detail_data)
         return order
 
 
