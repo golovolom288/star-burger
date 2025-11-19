@@ -195,7 +195,7 @@ class Orders(models.Model):
         Restaurant,
         on_delete=models.PROTECT,
         related_name='orders',
-        verbose_name='Ресторан выполняюзий заказ',
+        verbose_name='Ресторан выполняющий заказ',
         null=True,
         blank=True
     )
