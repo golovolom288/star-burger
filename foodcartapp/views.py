@@ -80,16 +80,11 @@ class OrderSerializer(ModelSerializer):
 
 @api_view(['POST'])
 def register_order(request):
-    if request.method == "POST":
-        with atomic():
-            order_json = request.data
-            serializer = OrderSerializer(data=order_json)
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-        for order_detail in serializer.validated_data["order_details"]:
-            order_detail["product"] = order_detail["product"].id
-        return Response(serializer.validated_data, 201)
-    elif request.method == "GET":
-        order = Orders.objects.order_by('-id').first()
-        serializer = OrderSerializer(order)
-        return Response(serializer.data)
+    with atomic():
+        order_json = request.data
+        serializer = OrderSerializer(data=order_json)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+    for order_detail in serializer.validated_data["order_details"]:
+        order_detail["product"] = order_detail["product"].id
+    return Response(serializer.validated_data, 201)
