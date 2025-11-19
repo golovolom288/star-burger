@@ -19,6 +19,6 @@ class GeoPy(models.Model):
         decimal_places=5
     )
     date = models.DateTimeField(
-        default=timezone.now(),
+        default=timezone.now,
         verbose_name="Дата загрузки данных"
     )
