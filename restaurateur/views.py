@@ -126,7 +126,7 @@ def view_orders(request):
             else:
                 restaurants[order.id][restaurant.id] = {
                     "name": restaurant.name,
-                    "distance": "Ошибка определения координат"
+                    "distance": "Адрес не найден"
                 }
         restaurants[order.id] = sorted(restaurants[order.id].values(), key=lambda item: item["distance"])
     return render(request, template_name='order_items.html', context={
