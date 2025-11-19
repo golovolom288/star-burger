@@ -11,9 +11,8 @@ from django.contrib.auth import views as auth_views
 from geopy import distance
 from foodcartapp.models import Product, Restaurant, Orders, RestaurantMenuItem
 from geopy_bd.models import GeoPy
+from geopy_bd.views import get_coordinates
 from star_burger.settings import YANDEX_API_KEY
-
-coordinates = {}
 
 
 class Login(forms.Form):
@@ -94,50 +93,14 @@ def view_restaurants(request):
         'restaurants': Restaurant.objects.all(),
     })
 
-
-def fetch_coordinates(apikey, address):
-    base_url = "https://geocode-maps.yandex.ru/1.x"
-    response = requests.get(base_url, params={
-        "geocode": address,
-        "apikey": apikey,
-        "format": "json",
-    })
-    response.raise_for_status()
-    found_places = response.json()['response']['GeoObjectCollection']['featureMember']
-
-    if not found_places:
-        return None
-
-    most_relevant = found_places[0]
-    lon, lat = most_relevant['GeoObject']['Point']['pos'].split(" ")
-    return lon, lat
-
-
-def get_coordinates(model):
-    global coordinates
-    try:
-        model_coordinates = coordinates[model.address]
-    except KeyError:
-        model_coordinates = GeoPy.objects.get_or_create(
-            address=model.address,
-            defaults={
-                "lat": fetch_coordinates(YANDEX_API_KEY, model.address)[0],
-                "lon": fetch_coordinates(YANDEX_API_KEY, model.address)[1]
-            }
-        )
-        coordinates[model.address] = {}
-        coordinates[model.address]["lat"] = model_coordinates[0].lat
-        coordinates[model.address]["lon"] = model_coordinates[0].lon
-    return model_coordinates
-
-
 @user_passes_test(is_manager, login_url='restaurateur:login')
 def view_orders(request):
     restaurants = {}
+    coordinates = {}
     restaurantmenuitem_model = RestaurantMenuItem.objects.all()
     restaurants_model = Restaurant.objects.only("id", "address", "name").prefetch_related("menu_items")
     for order in Orders.objects.only("id", "address", "order_details").prefetch_related("order_details"):
-        order_coordinates = get_coordinates(order)
+        order_coordinates, coordinates = get_coordinates(order, coordinates)
         restaurants[order.id] = {}
         for restaurant in restaurants_model:
             try:
@@ -145,7 +108,7 @@ def view_orders(request):
                     restaurantmenuitem_model.get(product=product.product, restaurant=restaurant, availability=True)
             except ObjectDoesNotExist:
                 continue
-            restaurant_coordinates = get_coordinates(restaurant)
+            restaurant_coordinates, coordinates = get_coordinates(restaurant, coordinates)
             if restaurant_coordinates and order_coordinates:
                 restaurants[order.id][restaurant.id] = {
                     "name": restaurant.name,
