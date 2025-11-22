@@ -2,7 +2,7 @@ from django.db import models
 from django.core.validators import MinValueValidator
 from django.utils import timezone
 from phonenumber_field.modelfields import PhoneNumberField
-
+from django.db.models import F, Sum
 
 STATUS_CHOICES = [
     ("Не обработан","Не обработан"),
@@ -43,11 +43,10 @@ class Restaurant(models.Model):
     def __str__(self):
         return self.name
 
-
 class ProductQuerySet(models.QuerySet):
     def available(self):
         products = (
-            RestaurantMenuItem.objects
+            RestaurantMenuItem.objectsaws
             .filter(availability=True)
             .values_list('product')
         )
@@ -140,7 +139,11 @@ class RestaurantMenuItem(models.Model):
     def __str__(self):
         return f"{self.restaurant.name} - {self.product.name}"
 
-
+class OrderItemsQuerySet(models.QuerySet):
+    def get_price(self):
+        return self.annotate(
+            price=Sum(F("order_details__price"))
+        )
 class Orders(models.Model):
     first_name = models.CharField(
         verbose_name="Имя",
@@ -199,6 +202,7 @@ class Orders(models.Model):
         null=True,
         blank=True
     )
+    objects = OrderItemsQuerySet.as_manager()
 
     class Meta:
         verbose_name = 'заказы'
@@ -241,3 +245,5 @@ class OrderDetails(models.Model):
 
     def __str__(self):
         return f"Заказ: {self.order.id} - {self.product}"
+
+

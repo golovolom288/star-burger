@@ -6,7 +6,6 @@ from rest_framework.serializers import ModelSerializer
 from rest_framework.response import Response
 from .models import Product, Orders, OrderDetails
 
-
 @api_view(['GET'])
 def banners_list_api(request):
     # FIXME move data to db?

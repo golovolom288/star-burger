@@ -130,6 +130,6 @@ def view_orders(request):
                 }
         restaurants[order.id] = sorted(restaurants[order.id].values(), key=lambda item: item["distance"])
     return render(request, template_name='order_items.html', context={
-        'order_items': Orders.objects.prefetch_related("order_details").annotate(price=Sum(F("order_details__price"))).iterator(chunk_size=500),
+        'order_items': Orders.objects.get_price().prefetch_related("order_details").iterator(chunk_size=500),
         'orders_availability': restaurants
     })
