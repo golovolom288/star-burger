@@ -1,8 +1,13 @@
+from collections import defaultdict
 from django.db import models
 from django.core.validators import MinValueValidator
 from django.utils import timezone
 from phonenumber_field.modelfields import PhoneNumberField
 from django.db.models import F, Sum
+from geopy import distance
+from geopy_bd.models import GeoPy
+from geopy_bd.views import fetch_coordinates
+from star_burger.settings import YANDEX_API_KEY
 
 STATUS_CHOICES = [
     ("Не обработан","Не обработан"),
@@ -46,7 +51,7 @@ class Restaurant(models.Model):
 class ProductQuerySet(models.QuerySet):
     def available(self):
         products = (
-            RestaurantMenuItem.objectsaws
+            RestaurantMenuItem.objects
             .filter(availability=True)
             .values_list('product')
         )
@@ -144,6 +149,48 @@ class OrderItemsQuerySet(models.QuerySet):
         return self.annotate(
             price=Sum(F("order_details__price"))
         )
+    def available(self):
+        addresses = []
+        addresses_with_coordinates = defaultdict(set)
+        orders = Orders.objects.all()
+        restaurants = Restaurant.objects.all()
+        for order in orders:
+            if not addresses.__contains__(order.address):
+                addresses.append(order.address)
+        for restaurant in restaurants:
+            if not addresses.__contains__(restaurant.address):
+                addresses.append(restaurant.address)
+        geopy_bd = GeoPy.objects.filter(address__in=addresses)
+        bd_addresses = list(geopy_bd.values_list("address", flat=True))
+        for address in addresses:
+            if not bd_addresses.__contains__(address):
+                address_coordinates = fetch_coordinates(YANDEX_API_KEY, address)
+                GeoPy.objects.create(address=address, lat=address_coordinates[0], lon=address_coordinates[1])
+                addresses_with_coordinates[address] = {
+                    address_coordinates
+                }
+            else:
+                address_coordinates = geopy_bd.get(address=address)
+                addresses_with_coordinates[address] = {
+                    (address_coordinates.lat, address_coordinates.lon)
+                }
+        restaurants_menu = defaultdict(set)
+        products = RestaurantMenuItem.objects.filter(availability=True)
+        available_restaurants = {}
+        for product in products:
+            restaurants_menu[product.restaurant].add(product.product)
+        for order in self:
+            available_restaurants[order.id] = {}
+            order_products = {order_detail.product for order_detail in order.order_details.all()}
+            for restaurant, products in restaurants_menu.items():
+                if order_products.issubset(products):
+                    available_restaurants[order.id][restaurant.id] = {
+                        "name": restaurant.name,
+                        "distance": round(distance.distance(addresses_with_coordinates[order.address], addresses_with_coordinates[restaurant.address]).km, 2)
+                    }
+            sorted(available_restaurants[order.id].values(), key=lambda item: item["distance"])
+        return available_restaurants
+
 class Orders(models.Model):
     first_name = models.CharField(
         verbose_name="Имя",

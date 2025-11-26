@@ -43,9 +43,9 @@
             <details>
             <summary>Рестораны, которые могут приготовить заказ:</summary>
               <ul>
-                {% for key, order in orders_availability.items%}
-                  {%if key == item.id%}
-                    {%for restaurant in order%}
+                {% for order_id, order in orders_availability.items%}
+                  {%if order_id == item.id%}
+                    {%for restaurant_id, restaurant in order.items%}
                       <li>{{ restaurant.name }} - {{ restaurant.distance }} км.</li>
                     {%endfor%}
                   {%endif%}

@@ -1,18 +1,11 @@
 from django import forms
-import requests
-from django.core.exceptions import ObjectDoesNotExist
-from django.db.models import F, Sum
 from django.shortcuts import redirect, render
 from django.views import View
 from django.urls import reverse_lazy
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth import authenticate, login
 from django.contrib.auth import views as auth_views
-from geopy import distance
-from foodcartapp.models import Product, Restaurant, Orders, RestaurantMenuItem
-from geopy_bd.models import GeoPy
-from geopy_bd.views import get_coordinates
-from star_burger.settings import YANDEX_API_KEY
+from foodcartapp.models import Product, Restaurant, Orders
 
 
 class Login(forms.Form):
@@ -95,41 +88,9 @@ def view_restaurants(request):
 
 @user_passes_test(is_manager, login_url='restaurateur:login')
 def view_orders(request):
-    restaurants = {}
-    coordinates = {}
-    restaurantmenuitem_model = RestaurantMenuItem.objects.all()
-    restaurants_model = Restaurant.objects.only("id", "address", "name").prefetch_related("menu_items")
-    for order in Orders.objects.only("id", "address", "order_details__product", "restaurant").prefetch_related("order_details"):
-        order_coordinates, coordinates = get_coordinates(order, coordinates)
-        restaurants[order.id] = {}
-        for restaurant in restaurants_model:
-            try:
-                for product in order.order_details.only("product").prefetch_related("product"):
-                    restaurantmenuitem_model.get(product=product.product, restaurant=restaurant, availability=True)
-            except ObjectDoesNotExist:
-                continue
-            restaurant_coordinates, coordinates = get_coordinates(restaurant, coordinates)
-            if restaurant_coordinates and order_coordinates:
-                restaurants[order.id][restaurant.id] = {
-                    "name": restaurant.name,
-                    "distance": round(
-                        distance.distance((
-                                coordinates[order.address]["lat"],
-                                coordinates[order.address]["lon"]
-                            ),
-                            (
-                                coordinates[restaurant.address]["lat"],
-                                coordinates[restaurant.address]["lon"]
-                            )).km, 2
-                    )
-                }
-            else:
-                restaurants[order.id][restaurant.id] = {
-                    "name": restaurant.name,
-                    "distance": "Адрес не найден"
-                }
-        restaurants[order.id] = sorted(restaurants[order.id].values(), key=lambda item: item["distance"])
+    available_restaurants = Orders.objects.available()
+    print(available_restaurants)
     return render(request, template_name='order_items.html', context={
         'order_items': Orders.objects.get_price().prefetch_related("order_details").iterator(chunk_size=500),
-        'orders_availability': restaurants
+        'orders_availability': available_restaurants
     })
