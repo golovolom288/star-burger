@@ -5,7 +5,7 @@ from django.urls import reverse_lazy
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth import authenticate, login
 from django.contrib.auth import views as auth_views
-from foodcartapp.models import Product, Restaurant, Orders
+from foodcartapp.models import Product, Restaurant, Orders, F
 
 
 class Login(forms.Form):
@@ -88,9 +88,8 @@ def view_restaurants(request):
 
 @user_passes_test(is_manager, login_url='restaurateur:login')
 def view_orders(request):
-    available_restaurants = Orders.objects.available()
-    print(available_restaurants)
+    available_restaurants = Orders.objects.exclude(status="Отдан заказчику").annotate(product=F("order_details__product"), restaurants=F("order_details__product__menu_items")).available()
     return render(request, template_name='order_items.html', context={
-        'order_items': Orders.objects.get_price().prefetch_related("order_details").iterator(chunk_size=500),
+        'order_items': Orders.objects.exclude(status="Отдан заказчику").get_price().prefetch_related("order_details").iterator(chunk_size=500),
         'orders_availability': available_restaurants
     })

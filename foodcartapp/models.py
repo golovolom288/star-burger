@@ -151,35 +151,26 @@ class OrderItemsQuerySet(models.QuerySet):
         )
     def available(self):
         addresses = []
-        addresses_with_coordinates = defaultdict(set)
-        orders = Orders.objects.all()
-        restaurants = Restaurant.objects.all()
-        for order in orders:
-            if not addresses.__contains__(order.address):
-                addresses.append(order.address)
-        for restaurant in restaurants:
-            if not addresses.__contains__(restaurant.address):
-                addresses.append(restaurant.address)
+        orders = self
+        addresses.extend(orders.values_list("address", flat=True))
+        addresses.extend(Restaurant.objects.values_list("address", flat=True))
+        addresses = list(set(addresses))
         geopy_bd = GeoPy.objects.filter(address__in=addresses)
-        bd_addresses = list(geopy_bd.values_list("address", flat=True))
+        addresses_with_coordinates = {
+            geopy.address: (geopy.lat, geopy.lon)
+            for geopy in geopy_bd
+        }
         for address in addresses:
-            if not bd_addresses.__contains__(address):
+            if not addresses_with_coordinates.__contains__(address):
                 address_coordinates = fetch_coordinates(YANDEX_API_KEY, address)
                 GeoPy.objects.create(address=address, lat=address_coordinates[0], lon=address_coordinates[1])
-                addresses_with_coordinates[address] = {
-                    address_coordinates
-                }
-            else:
-                address_coordinates = geopy_bd.get(address=address)
-                addresses_with_coordinates[address] = {
-                    (address_coordinates.lat, address_coordinates.lon)
-                }
+                addresses_with_coordinates[address] = address_coordinates
         restaurants_menu = defaultdict(set)
-        products = RestaurantMenuItem.objects.filter(availability=True)
+        products = self.restaurants.all()
         available_restaurants = {}
         for product in products:
             restaurants_menu[product.restaurant].add(product.product)
-        for order in self:
+        for order in orders:
             available_restaurants[order.id] = {}
             order_products = {order_detail.product for order_detail in order.order_details.all()}
             for restaurant, products in restaurants_menu.items():
