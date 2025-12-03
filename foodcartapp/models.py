@@ -3,7 +3,7 @@ from django.db import models
 from django.core.validators import MinValueValidator
 from django.utils import timezone
 from phonenumber_field.modelfields import PhoneNumberField
-from django.db.models import F, Sum
+from django.db.models import F, Sum, Prefetch
 from geopy import distance
 from geopy_bd.models import GeoPy
 from geopy_bd.views import fetch_coordinates
@@ -166,10 +166,19 @@ class OrderItemsQuerySet(models.QuerySet):
                 GeoPy.objects.create(address=address, lat=address_coordinates[0], lon=address_coordinates[1])
                 addresses_with_coordinates[address] = address_coordinates
         restaurants_menu = defaultdict(set)
-        products = self.restaurants.all()
+        products = (
+            Product.objects
+            .prefetch_related(
+                Prefetch(
+                    'menu_items',
+                    queryset=RestaurantMenuItem.objects.select_related('restaurant')
+                )
+            )
+        )
         available_restaurants = {}
         for product in products:
-            restaurants_menu[product.restaurant].add(product.product)
+            for menu_item in product.menu_items.filter(availability=True):
+                restaurants_menu[menu_item.restaurant].add(menu_item.product)
         for order in orders:
             available_restaurants[order.id] = {}
             order_products = {order_detail.product for order_detail in order.order_details.all()}
