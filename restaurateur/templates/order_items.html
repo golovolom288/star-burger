@@ -46,7 +46,11 @@
                 {% for order_id, order in orders_availability.items%}
                   {%if order_id == item.id%}
                     {%for restaurant_id, restaurant in order.items%}
-                      <li>{{ restaurant.name }} - {{ restaurant.distance }} км.</li>
+                      {%if item.address != "Адреса не существует"%}
+                        <li>{{ restaurant.name }} - {{ restaurant.distance }} км.</li>
+                      {%else%}
+                        <li>{{ restaurant.name }}</li>
+                      {%endif%}
                     {%endfor%}
                   {%endif%}
                 {% endfor %}

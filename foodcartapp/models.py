@@ -163,8 +163,11 @@ class OrderItemsQuerySet(models.QuerySet):
         for address in addresses:
             if not addresses_with_coordinates.__contains__(address):
                 address_coordinates = fetch_coordinates(YANDEX_API_KEY, address)
-                GeoPy.objects.create(address=address, lat=address_coordinates[0], lon=address_coordinates[1])
-                addresses_with_coordinates[address] = address_coordinates
+                if address_coordinates:
+                    GeoPy.objects.create(address=address, lat=address_coordinates[0], lon=address_coordinates[1])
+                    addresses_with_coordinates[address] = address_coordinates
+                else:
+                    Orders.objects.filter(address=address).update(address="Адреса не существует")
         restaurants_menu = defaultdict(set)
         products = (
             Product.objects
