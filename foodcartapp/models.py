@@ -4,10 +4,6 @@ from django.core.validators import MinValueValidator
 from django.utils import timezone
 from phonenumber_field.modelfields import PhoneNumberField
 from django.db.models import F, Sum, Prefetch
-from geopy import distance
-from geopy_bd.models import GeoPy
-from geopy_bd.views import fetch_coordinates
-from star_burger.settings import YANDEX_API_KEY
 
 STATUS_CHOICES = [
     ("Не обработан","Не обработан"),
@@ -149,49 +145,19 @@ class OrderItemsQuerySet(models.QuerySet):
         return self.annotate(
             price=Sum(F("order_details__price"))
         )
-    def available(self):
-        addresses = []
-        orders = self
-        addresses.extend(orders.values_list("address", flat=True))
-        addresses.extend(Restaurant.objects.values_list("address", flat=True))
-        addresses = list(set(addresses))
-        geopy_bd = GeoPy.objects.filter(address__in=addresses)
-        addresses_with_coordinates = {
-            geopy.address: (geopy.lat, geopy.lon)
-            for geopy in geopy_bd
-        }
-        for address in addresses:
-            if not addresses_with_coordinates.__contains__(address):
-                address_coordinates = fetch_coordinates(YANDEX_API_KEY, address)
-                if address_coordinates:
-                    GeoPy.objects.create(address=address, lat=address_coordinates[0], lon=address_coordinates[1])
-                    addresses_with_coordinates[address] = address_coordinates
-                else:
-                    Orders.objects.filter(address=address).update(address="Адреса не существует")
-        restaurants_menu = defaultdict(set)
-        products = (
-            Product.objects
-            .prefetch_related(
-                Prefetch(
-                    'menu_items',
-                    queryset=RestaurantMenuItem.objects.select_related('restaurant')
-                )
-            )
-        )
-        available_restaurants = {}
-        for product in products:
-            for menu_item in product.menu_items.filter(availability=True):
-                restaurants_menu[menu_item.restaurant].add(menu_item.product)
-        for order in orders:
-            available_restaurants[order.id] = {}
-            order_products = {order_detail.product for order_detail in order.order_details.all()}
-            for restaurant, products in restaurants_menu.items():
+    def get_available_restaurants(self):
+        menu_items = RestaurantMenuItem.objects.filter(availability=True).select_related('restaurant', 'product')
+        restaurant_products = defaultdict(set)
+        available_restaurants = defaultdict(set)
+        for item in menu_items:
+            restaurant_products[item.restaurant].add(item.product)
+        for order in self:
+            order_products = set()
+            for detail in order.order_details.all():
+                order_products.add(detail.product)
+            for restaurant, products in restaurant_products.items():
                 if order_products.issubset(products):
-                    available_restaurants[order.id][restaurant.id] = {
-                        "name": restaurant.name,
-                        "distance": round(distance.distance(addresses_with_coordinates[order.address], addresses_with_coordinates[restaurant.address]).km, 2)
-                    }
-            sorted(available_restaurants[order.id].values(), key=lambda item: item["distance"])
+                    available_restaurants[order.id].add(restaurant)
         return available_restaurants
 
 class Orders(models.Model):
