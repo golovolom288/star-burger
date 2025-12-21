@@ -25,7 +25,7 @@ def fetch_coordinates(apikey, address):
     lon, lat = most_relevant['GeoObject']['Point']['pos'].split(" ")
     return lon, lat
 
-def get_distance(orders, available_restaurants):
+def get_distance(orders):
     addresses = []
     distances = {}
     addresses.extend(orders.values_list("address", flat=True))
@@ -45,7 +45,7 @@ def get_distance(orders, available_restaurants):
     for order in orders:
         try:
             distances[order.id] = {}
-            for restaurant in available_restaurants[order.id]:
+            for restaurant in orders.get_available_restaurants()[order.id]:
                 try:
                     distances[order.id][restaurant.id] = {
                         "name": restaurant.name,

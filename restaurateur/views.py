@@ -95,19 +95,12 @@ def view_orders(request):
         .prefetch_related(
             Prefetch(
                 'order_details',
-                queryset=OrderDetails.objects.select_related('product').prefetch_related(
-                    Prefetch(
-                        'product__menu_items',
-                        queryset=RestaurantMenuItem.objects.select_related('restaurant')
-                    )
-                )
+                queryset=OrderDetails.objects.select_related('product')
             )
         )
         .get_price()
     )
-    available_restaurants = Orders.objects.get_available_restaurants()
-    distances = get_distance(orders, available_restaurants)
-    print(distances)
+    distances = get_distance(orders)
     return render(request, template_name='order_items.html', context={
         'order_items': orders,
         'orders_availability': distances,
