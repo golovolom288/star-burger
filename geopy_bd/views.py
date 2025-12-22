@@ -45,7 +45,7 @@ def get_distance(orders):
     for order in orders:
         try:
             distances[order.id] = {}
-            for restaurant in orders.get_available_restaurants()[order.id]:
+            for restaurant in order.available_restaurants:
                 try:
                     distances[order.id][restaurant.id] = {
                         "name": restaurant.name,

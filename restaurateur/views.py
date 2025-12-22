@@ -99,6 +99,7 @@ def view_orders(request):
             )
         )
         .get_price()
+        .get_available_restaurants()
     )
     distances = get_distance(orders)
     return render(request, template_name='order_items.html', context={

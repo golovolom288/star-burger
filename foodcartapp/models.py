@@ -148,17 +148,18 @@ class OrderItemsQuerySet(models.QuerySet):
     def get_available_restaurants(self):
         menu_items = RestaurantMenuItem.objects.filter(availability=True).select_related('restaurant', 'product')
         restaurant_products = defaultdict(set)
-        available_restaurants = defaultdict(set)
         for item in menu_items:
             restaurant_products[item.restaurant].add(item.product)
         for order in self:
+            available_restaurants = set()
             order_products = set()
             for detail in order.order_details.all():
                 order_products.add(detail.product)
             for restaurant, products in restaurant_products.items():
                 if order_products.issubset(products):
-                    available_restaurants[order.id].add(restaurant)
-        return available_restaurants
+                    available_restaurants.add(restaurant)
+            order.available_restaurants = available_restaurants
+        return self
 
 class Orders(models.Model):
     first_name = models.CharField(
