@@ -10,13 +10,21 @@ env.read_env()
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-
+ENVIRONMENT = 'production'
 
 SECRET_KEY = env('SECRET_KEY')
 DEBUG = env.bool('DEBUG', True)
 YANDEX_API_KEY = env('YANDEX_API_KEY')
+ROLLBAR_TOKEN = env('ROLLBAR_TOKEN')
 
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', ['127.0.0.1', 'localhost'])
+
+ROLLBAR = {
+    'access_token': ROLLBAR_TOKEN,
+    'environment': ENVIRONMENT,
+    'code_version': '1.0',
+    'root': BASE_DIR,
+}
 
 INSTALLED_APPS = [
     'foodcartapp.apps.FoodcartappConfig',
@@ -33,6 +41,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'rollbar.contrib.django.middleware.RollbarNotifierMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -84,10 +93,16 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 MEDIA_URL = '/media/'
 
 DATABASES = {
-    'default': dj_database_url.config(
-        default='sqlite:////{0}'.format(os.path.join(BASE_DIR, 'db.sqlite3'))
-    ),
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': 'starburger',
+        'USER': 'root',
+        'PASSWORD': '12345',
+        'HOST': 'localhost',
+        'PORT': '',
+    }
 }
+
 ATOMIC_REQUESTS = True
 AUTH_PASSWORD_VALIDATORS = [
     {
