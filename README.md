@@ -149,10 +149,15 @@ Parcel будет следить за файлами в каталоге `bundle
 - `ALLOWED_HOSTS` — [см. документацию Django](https://docs.djangoproject.com/en/5.2/ref/settings/#allowed-hosts)
 - `YANDEX_API_KEY`= ключ апи от [Yandex api](https://developer.tech.yandex.ru/services)
 
+## Быстрый деплой с гита
+
+Находясь в папке пользователя root написать ./deploy_star_burger.sh в терминал и скрипт сам запулит все изменения с гита, мигрирует базу и скачает необходимые зависимости
+Ссылка на сайт: https://starburgerservice.ru/
+
 ## Цели проекта
 
 Код написан в учебных целях — это урок в курсе по Python и веб-разработке на сайте [Devman](https://dvmn.org). За основу был взят код проекта [FoodCart](https://github.com/Saibharath79/FoodCart).
 
 Где используется репозиторий:
 
-- Второй и третий урок [учебного курса Django](https://dvmn.org/modules/django/)
+- Второй и третий урок [учебного курса Django](https://dvmn.org/modules/django/)[devman.pub](..%2F..%2F..%2F..%2FDownloads%2Fdevman.pub)
